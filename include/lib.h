@@ -47,6 +47,4 @@ Color ColorFromHex(const char* hex);
 
 void normalize(Vector2& vector);
 
-Rectangle getUVRectangle(const Texture2D* texture, int index, int rows, int cols);
-
 #endif

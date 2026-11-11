@@ -11,13 +11,13 @@ enum class TextureType { SINGLE, ATLAS };
 // TextureAsset is responsible for loading and unloading raylib textures.
 class TextureAsset {
 private:
-    Texture2D texture; // Immutable once loaded
-    const std::string alias;
+    Texture2D mTexture; // Immutable once loaded
+    const std::string mAlias;
 
 public:
-    TextureType type = TextureType::SINGLE;
-    std::map<int32_t, std::vector<int32_t>> animationSpriteSheetFrames;
-    Vector2 spriteSheetDimensions;
+    TextureType mType = TextureType::SINGLE;
+    std::map<int32_t, std::vector<int32_t>> mAnimationSpriteSheetFrames;
+    Vector2 mSpriteSheetDimensions;
 
 public:
     // Similar class-centralized registry spiel to Entity
@@ -28,7 +28,7 @@ public:
     static T* create(T* object) {
         auto ptr = std::unique_ptr<T>(object);
         T* outPtr = ptr.get();
-        TextureAsset::registry().emplace(ptr->alias, std::move(ptr));
+        TextureAsset::registry().emplace(ptr->mAlias, std::move(ptr));
         return outPtr;
     }
 
@@ -36,51 +36,61 @@ public:
     ~TextureAsset();
 
     void useDefaultAnimation();
+    Rectangle getTextureArea(int32_t sliceIndex) const;
 
     const Texture2D& getTexture2D() const {
-        return this->texture;
+        return mTexture;
     }
 
-    Rectangle getTextureArea(int32_t sliceIndex) const;
+    int32_t getWidth() const {
+        return mTexture.width;
+    }
+
+    int32_t getHeight() const {
+        return mTexture.height;
+    }
 };
 
-class EntityTexture {
+class TextureInstance {
 private:
     static constexpr uint32_t DEFAULT_FRAME_SPEED = 14;
 
 private:
-    const TextureAsset* asset = nullptr;
+    float mAnimationTime = 0.0f;
+    int32_t mCurrentAnimationFrameIndex = 0;
 
 public:
-    Vector2 uvOrigin = {0.0f, 0.0f};
-    Vector2 uvSize;
-    Color tint = WHITE;
+    const TextureAsset* mAsset = nullptr;
+
+    Vector2 mUvOrigin = {0.0f, 0.0f};
+    Vector2 mUvSize;
+    Color mTint = WHITE;
 
     // For animations
-    int32_t currentAnimation = 0;
-    int32_t currentAnimationFrameIndex = 0;
+    int32_t mCurrentAnimation = 0;
 
-    uint32_t frameSpeed = EntityTexture::DEFAULT_FRAME_SPEED;
-    float animationTime = 0.0f;
+    uint32_t mFrameSpeed = TextureInstance::DEFAULT_FRAME_SPEED;
+
+    bool mIsFlippedX = false;
+    bool mShouldAnimationLoop = true;
+    bool mIsAnimationCompleted = false; // Always false if animation is looping
 
 private:
     const std::vector<int32_t>& getCurrentAnimationFrames() const {
-        return this->asset->animationSpriteSheetFrames.at(this->currentAnimation);
+        return mAsset->mAnimationSpriteSheetFrames.at(mCurrentAnimation);
     }
 
 public:
-    EntityTexture() = default;
-    EntityTexture(const TextureAsset* asset);
+    TextureInstance() = default;
+    TextureInstance(const TextureAsset* asset);
 
     void loadAsset(const TextureAsset* asset);
-
+    void setAnimation(int32_t animation);
     void render(Rectangle destination, Vector2 origin, float angle) const;
-
     void animate(float deltaTime);
 
-    void setDuration(float duration) {
-        this->frameSpeed =
-            static_cast<uint32_t>(this->getCurrentAnimationFrames().size() / duration);
+    void setAnimationDuration(float duration) {
+        mFrameSpeed = static_cast<uint32_t>(this->getCurrentAnimationFrames().size() / duration);
     }
 };
 

@@ -3,27 +3,21 @@
 Map::Map(
     int mapColumns,
     int mapRows,
-    unsigned int* levelData,
-    const char* textureFilePath,
+    int32_t* levelData,
     float tileSize,
-    int textureColumns,
-    int textureRows,
+    const char* textureAlias,
     Vector2 origin
 ) :
     mMapColumns {mapColumns},
     mMapRows {mapRows},
     mLevelData {levelData},
-    mTextureAtlas {LoadTexture(textureFilePath)},
     mTileSize {tileSize},
-    mTextureColumns {textureColumns},
-    mTextureRows {textureRows},
+    mTexture {TextureAsset::get(textureAlias)},
     mOrigin {origin} {
     build();
 }
 
-Map::~Map() {
-    UnloadTexture(mTextureAtlas);
-}
+Map::~Map() {}
 
 void Map::build() {
     // Calculate map boundaries in world coordinates
@@ -32,14 +26,19 @@ void Map::build() {
     mTopBoundary = mOrigin.y - (mMapRows * mTileSize) / 2.0f;
     mBottomBoundary = mOrigin.y + (mMapRows * mTileSize) / 2.0f;
 
+    const TextureAsset* texture = mTexture.mAsset;
+
+    int textureRows = texture->mSpriteSheetDimensions.x;
+    int textureCols = texture->mSpriteSheetDimensions.y;
+
     // Precompute texture areas for each tile
-    for (int row = 0; row < mTextureRows; row++) {
-        for (int col = 0; col < mTextureColumns; col++) {
+    for (int row = 0; row < textureRows; row++) {
+        for (int col = 0; col < textureCols; col++) {
             Rectangle textureArea = {
-                static_cast<float>(col) * (mTextureAtlas.width / mTextureColumns),
-                static_cast<float>(row) * (mTextureAtlas.height / mTextureRows),
-                static_cast<float>(mTextureAtlas.width) / mTextureColumns,
-                static_cast<float>(mTextureAtlas.height) / mTextureRows
+                static_cast<float>(col) * (texture->getWidth() / textureCols),
+                static_cast<float>(row) * (texture->getHeight() / textureRows),
+                static_cast<float>(texture->getWidth()) / textureCols,
+                static_cast<float>(texture->getHeight()) / textureRows
             };
 
             mTextureAreas.push_back(textureArea);
@@ -48,6 +47,8 @@ void Map::build() {
 }
 
 void Map::render() {
+    const Texture2D& sheet = mTexture.mAsset->getTexture2D();
+
     // Draw each tile in the map
     for (int row = 0; row < mMapRows; row++) {
         // Draw each column in the row
@@ -55,9 +56,10 @@ void Map::render() {
             // Get the tile index at the current row and column
             int tile = mLevelData[row * mMapColumns + col];
 
-            // If the tile index is 0, we do not draw anything
-            if (tile == 0)
+            // If the tile index is -1, we do not draw anything
+            if (tile == -1) {
                 continue;
+            }
 
             Rectangle destinationArea = {
                 mLeftBoundary + col * mTileSize,
@@ -66,36 +68,31 @@ void Map::render() {
                 mTileSize
             };
 
-            // Draw the tile
-            DrawTexturePro(
-                mTextureAtlas,
-                mTextureAreas[tile - 1], // -1 because tile indices start at 1
-                destinationArea,
-                {0.0f, 0.0f}, // origin
-                0.0f, // rotation
-                WHITE // tint
-            );
+            DrawTexturePro(sheet, mTextureAreas[tile], destinationArea, {0.0f, 0.0f}, 0.0f, WHITE);
         }
     }
 }
 
-bool Map::isSolidTileAt(Vector2 position, float* xOverlap, float* yOverlap) {
+bool Map::isSolidTileAt(Vector2 position, float* xOverlap, float* yOverlap) const {
     *xOverlap = 0.0f;
     *yOverlap = 0.0f;
 
     if (position.x < mLeftBoundary || position.x > mRightBoundary || position.y < mTopBoundary
-        || position.y > mBottomBoundary)
+        || position.y > mBottomBoundary) {
         return false;
+    }
 
     int tileXIndex = floor((position.x - mLeftBoundary) / mTileSize);
     int tileYIndex = floor((position.y - mTopBoundary) / mTileSize);
 
-    if (tileXIndex < 0 || tileXIndex >= mMapColumns || tileYIndex < 0 || tileYIndex >= mMapRows)
+    if (tileXIndex < 0 || tileXIndex >= mMapColumns || tileYIndex < 0 || tileYIndex >= mMapRows) {
         return false;
+    }
 
     int tile = mLevelData[tileYIndex * mMapColumns + tileXIndex];
-    if (tile == 0)
+    if (tile == -1) {
         return false;
+    }
 
     float tileCentreX = mLeftBoundary + tileXIndex * mTileSize + mTileSize / 2.0f;
     float tileCentreY = mTopBoundary + tileYIndex * mTileSize + mTileSize / 2.0f;

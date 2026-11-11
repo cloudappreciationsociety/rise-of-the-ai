@@ -1,6 +1,7 @@
 #include "entity.h"
 
 #include "constants.h"
+#include "map.h"
 
 uint32_t Entity::idCounter = 0;
 
@@ -9,17 +10,23 @@ std::map<uint32_t, std::unique_ptr<Entity>>& Entity::registry() {
     return registry;
 }
 
-Entity::Entity() : id(Entity::idCounter++) {}
-
-Entity::Entity(const TextureAsset* textureAsset) : id(Entity::idCounter++), texture(textureAsset) {}
-
-bool Entity::shouldAnimate() const {
-    return true;
+void Entity::updateAll(float deltaTime) {
+    for (auto& pair : Entity::registry()) {
+        pair.second->update(deltaTime);
+    }
 }
 
-bool Entity::shouldUpdate() const {
-    return this->status == EntityStatus::ACTIVE;
+void Entity::renderAll() {
+    for (const auto& pair : Entity::registry()) {
+        pair.second->render();
+    }
 }
+
+Entity::Entity() : mId(Entity::idCounter++) {}
+
+Entity::Entity(const TextureAsset* textureAsset) :
+    mId(Entity::idCounter++),
+    mTexture(textureAsset) {}
 
 void Entity::update(float deltaTime) {
     if (!this->shouldUpdate()) {
@@ -27,38 +34,34 @@ void Entity::update(float deltaTime) {
     }
 
     if (this->shouldAnimate()) {
-        this->texture.animate(deltaTime);
+        mTexture.animate(deltaTime);
     }
 }
 
 void Entity::render() const {
-    if (this->status == EntityStatus::INACTIVE) {
+    if (mStatus == EntityStatus::INACTIVE) {
         return;
     }
 
     // Destination rectangle – centred on position
-    Rectangle destinationArea = {
-        this->position.x,
-        this->position.y,
-        static_cast<float>(this->scale.x),
-        static_cast<float>(this->scale.y)
-    };
+    Rectangle destinationArea =
+        {mPosition.x, mPosition.y, static_cast<float>(mScale.x), static_cast<float>(mScale.y)};
 
     // Origin inside the source texture (centre of the texture)
     Vector2 originOffset = {
-        static_cast<float>(this->scale.x) / 2.0f,
-        static_cast<float>(this->scale.y) / 2.0f
+        static_cast<float>(mScale.x) / 2.0f,
+        static_cast<float>(mScale.y) / 2.0f
     };
 
     // Render the texture on screen
-    this->texture.render(destinationArea, originOffset, this->angle);
+    mTexture.render(destinationArea, originOffset, mAngle);
 }
 
 void PhysicsEntity::resetColliderFlags() {
-    this->isCollidingTop = false;
-    this->isCollidingBottom = false;
-    this->isCollidingRight = false;
-    this->isCollidingLeft = false;
+    mIsCollidingTop = false;
+    mIsCollidingBottom = false;
+    mIsCollidingRight = false;
+    mIsCollidingLeft = false;
 }
 
 /**
@@ -76,16 +79,16 @@ bool PhysicsEntity::isColliding(const PhysicsEntity* other) const {
         return false;
     }
 
-    float xDistance = fabs(this->position.x - other->position.x)
-        - ((this->colliderDimensions.x + other->colliderDimensions.x) / 2.0f);
-    float yDistance = fabs(this->position.y - other->position.y)
-        - ((this->colliderDimensions.y + other->colliderDimensions.y) / 2.0f);
+    float xDistance = fabs(mPosition.x - other->mPosition.x)
+        - ((mColliderDimensions.x + other->mColliderDimensions.x) / 2.0f);
+    float yDistance = fabs(mPosition.y - other->mPosition.y)
+        - ((mColliderDimensions.y + other->mColliderDimensions.y) / 2.0f);
 
     return xDistance < 0.0f && yDistance < 0.0f;
 }
 
 void PhysicsEntity::checkCollisionsX() {
-    for (PhysicsEntity* collidableEntity : this->collisionCandidates) {
+    for (PhysicsEntity* collidableEntity : mCollisionCandidates) {
         if (!this->isColliding(collidableEntity)) {
             continue;
         }
@@ -95,10 +98,10 @@ void PhysicsEntity::checkCollisionsX() {
         // collision detections. So the solution I found is only resolve X
         // collisions if there's significant Y overlap, preventing the
         // platform we're standing on from acting like a wall.
-        float yDistance = fabs(this->position.y - collidableEntity->position.y);
+        float yDistance = fabs(mPosition.y - collidableEntity->mPosition.y);
         float yOverlap = fabs(
-            yDistance - (this->colliderDimensions.y / 2.0f)
-            - (collidableEntity->colliderDimensions.y / 2.0f)
+            yDistance - (mColliderDimensions.y / 2.0f)
+            - (collidableEntity->mColliderDimensions.y / 2.0f)
         );
 
         // Skip if barely touching vertically (standing on platform)
@@ -106,28 +109,28 @@ void PhysicsEntity::checkCollisionsX() {
             continue;
         }
 
-        float xDistance = fabs(this->position.x - collidableEntity->position.x);
+        float xDistance = fabs(mPosition.x - collidableEntity->mPosition.x);
         float xOverlap = fabs(
-            xDistance - (this->colliderDimensions.x / 2.0f)
-            - (collidableEntity->colliderDimensions.x / 2.0f)
+            xDistance - (mColliderDimensions.x / 2.0f)
+            - (collidableEntity->mColliderDimensions.x / 2.0f)
         );
 
-        if (this->velocity.x > 0) {
-            this->position.x -= xOverlap;
-            this->velocity.x = 0;
+        if (mVelocity.x > 0) {
+            mPosition.x -= xOverlap;
+            mVelocity.x = 0;
 
             // Collision!
-            this->isCollidingRight = true;
+            mIsCollidingRight = true;
 
-            this->collisions.push_back({collidableEntity, CollisionFace::RIGHT});
-        } else if (this->velocity.x < 0) {
-            this->position.x += xOverlap;
-            this->velocity.x = 0;
+            mCollisions.push_back({collidableEntity, CollisionFace::RIGHT});
+        } else if (mVelocity.x < 0) {
+            mPosition.x += xOverlap;
+            mVelocity.x = 0;
 
             // Collision!
-            this->isCollidingLeft = true;
+            mIsCollidingLeft = true;
 
-            this->collisions.push_back({collidableEntity, CollisionFace::LEFT});
+            mCollisions.push_back({collidableEntity, CollisionFace::LEFT});
         }
     }
 }
@@ -149,7 +152,7 @@ void PhysicsEntity::checkCollisionsX() {
  */
 void PhysicsEntity::checkCollisionsY() {
     // STEP 1: For every entity that our player can collide with...
-    for (PhysicsEntity* collidableEntity : this->collisionCandidates) {
+    for (PhysicsEntity* collidableEntity : mCollisionCandidates) {
         if (!this->isColliding(collidableEntity)) {
             continue;
         }
@@ -157,70 +160,168 @@ void PhysicsEntity::checkCollisionsY() {
         // STEP 2: Calculate the distance between its centre and our centre
         //         and use that to calculate the amount of overlap between
         //         both bodies.
-        float yDistance = fabs(this->position.y - collidableEntity->position.y);
+        float yDistance = fabs(mPosition.y - collidableEntity->mPosition.y);
         float yOverlap = fabs(
-            yDistance - (this->colliderDimensions.y / 2.0f)
-            - (collidableEntity->colliderDimensions.y / 2.0f)
+            yDistance - (mColliderDimensions.y / 2.0f)
+            - (collidableEntity->mColliderDimensions.y / 2.0f)
         );
 
         // STEP 3: "Unclip" ourselves from the other entity, and zero our
         //         vertical velocity.
-        if (this->velocity.y > 0) {
-            this->position.y -= yOverlap;
-            this->velocity.y = 0;
-            this->isCollidingBottom = true;
+        if (mVelocity.y > 0) {
+            mPosition.y -= yOverlap;
+            mVelocity.y = 0;
+            mIsCollidingBottom = true;
 
-            this->collisions.push_back({collidableEntity, CollisionFace::BOTTOM});
-        } else if (this->velocity.y < 0) {
-            this->position.y += yOverlap;
-            this->velocity.y = 0;
-            this->isCollidingTop = true;
+            mCollisions.push_back({collidableEntity, CollisionFace::BOTTOM});
+        } else if (mVelocity.y < 0) {
+            mPosition.y += yOverlap;
+            mVelocity.y = 0;
+            mIsCollidingTop = true;
 
-            this->collisions.push_back({collidableEntity, CollisionFace::TOP});
+            mCollisions.push_back({collidableEntity, CollisionFace::TOP});
         }
     }
 }
 
+void PhysicsEntity::checkMapCollisionsY() {
+    if (mMap == nullptr)
+        return;
+
+    Vector2 topCentreProbe = {mPosition.x, mPosition.y - (mColliderDimensions.y / 2.0f)};
+    Vector2 topLeftProbe = {
+        mPosition.x - (mColliderDimensions.x / 2.0f),
+        mPosition.y - (mColliderDimensions.y / 2.0f)
+    };
+    Vector2 topRightProbe = {
+        mPosition.x + (mColliderDimensions.x / 2.0f),
+        mPosition.y - (mColliderDimensions.y / 2.0f)
+    };
+
+    Vector2 bottomCentreProbe = {mPosition.x, mPosition.y + (mColliderDimensions.y / 2.0f)};
+    Vector2 bottomLeftProbe = {
+        mPosition.x - (mColliderDimensions.x / 2.0f),
+        mPosition.y + (mColliderDimensions.y / 2.0f)
+    };
+    Vector2 bottomRightProbe = {
+        mPosition.x + (mColliderDimensions.x / 2.0f),
+        mPosition.y + (mColliderDimensions.y / 2.0f)
+    };
+
+    float xOverlap = 0.0f;
+    float yOverlap = 0.0f;
+
+    // COLLISION ABOVE (jumping upward)
+    if ((mMap->isSolidTileAt(topCentreProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(topLeftProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(topRightProbe, &xOverlap, &yOverlap))
+        && mVelocity.y < 0.0f) {
+        mPosition.y += yOverlap; // push down
+        mVelocity.y = 0.0f;
+        mIsCollidingTop = true;
+    }
+
+    // COLLISION BELOW (falling downward)
+    if ((mMap->isSolidTileAt(bottomCentreProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(bottomLeftProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(bottomRightProbe, &xOverlap, &yOverlap))
+        && mVelocity.y > 0.0f) {
+        mPosition.y -= yOverlap; // push up
+        mVelocity.y = 0.0f;
+        mIsCollidingBottom = true;
+    }
+}
+
+void PhysicsEntity::checkMapCollisionsX() {
+    if (mMap == nullptr)
+        return;
+
+    Vector2 leftCentreProbe = {mPosition.x - (mColliderDimensions.x / 2.0f), mPosition.y};
+    Vector2 leftTopProbe = {
+        mPosition.x - (mColliderDimensions.x / 2.0f),
+        mPosition.y - (mColliderDimensions.y / 2.0f)
+    };
+    Vector2 leftBottomProbe = {
+        mPosition.x - (mColliderDimensions.x / 2.0f),
+        mPosition.y + (mColliderDimensions.y / 2.0f)
+    };
+
+    Vector2 rightCentreProbe = {mPosition.x + (mColliderDimensions.x / 2.0f), mPosition.y};
+    Vector2 rightTopProbe = {
+        mPosition.x + (mColliderDimensions.x / 2.0f),
+        mPosition.y - (mColliderDimensions.y / 2.0f)
+    };
+    Vector2 rightBottomProbe = {
+        mPosition.x + (mColliderDimensions.x / 2.0f),
+        mPosition.y + (mColliderDimensions.y / 2.0f)
+    };
+
+    float xOverlap = 0.0f;
+    float yOverlap = 0.0f;
+
+    // COLLISION ON RIGHT (moving right)
+    if ((mMap->isSolidTileAt(rightCentreProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(rightTopProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(rightBottomProbe, &xOverlap, &yOverlap))
+        && mVelocity.x > 0.0f && yOverlap >= 0.5f) {
+        mPosition.x -= xOverlap * 1.01f; // push left
+        mVelocity.x = 0.0f;
+        mIsCollidingRight = true;
+    }
+
+    // COLLISION ON LEFT (moving left)
+    if ((mMap->isSolidTileAt(leftCentreProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(leftTopProbe, &xOverlap, &yOverlap)
+         || mMap->isSolidTileAt(leftBottomProbe, &xOverlap, &yOverlap))
+        && mVelocity.x < 0.0f && yOverlap >= 0.5f) {
+        mPosition.x += xOverlap * 1.01f; // push right
+        mVelocity.x = 0.0f;
+        mIsCollidingLeft = true;
+    }
+}
+
 void PhysicsEntity::collideAndMove(float deltaTime) {
-    if (this->anchored) {
+    if (mAnchored) {
         return;
     }
 
     this->resetColliderFlags();
-    this->collisions.clear();
+    mCollisions.clear();
 
-    this->velocity.x += this->acceleration.x * deltaTime;
-    this->velocity.y += this->acceleration.y * deltaTime;
+    mVelocity.x += mAcceleration.x * deltaTime;
+    mVelocity.y += mAcceleration.y * deltaTime;
 
-    this->position.y += this->velocity.y * deltaTime;
+    mPosition.y += mVelocity.y * deltaTime;
     this->checkCollisionsY();
+    this->checkMapCollisionsY();
 
-    this->position.x += this->velocity.x * deltaTime;
+    mPosition.x += mVelocity.x * deltaTime;
     this->checkCollisionsX();
+    this->checkMapCollisionsX();
 
-    for (const auto& collision : this->collisions) {
+    for (const auto& collision : mCollisions) {
         this->handleCollision(collision);
     }
 }
 
 void PhysicsEntity::applyDragX(float deltaTime, float dragCoefficient) {
-    float dragForce = -dragCoefficient * this->velocity.x;
+    float dragForce = -dragCoefficient * mVelocity.x;
 
     // If one step of drag would reverse the velocity, set it exactly to zero instead
-    if (std::fabs(dragForce * deltaTime) > std::fabs(this->velocity.x)) {
-        dragForce = -this->velocity.x / deltaTime;
+    if (std::fabs(dragForce * deltaTime) > std::fabs(mVelocity.x)) {
+        dragForce = -mVelocity.x / deltaTime;
     }
 
-    this->acceleration.x = dragForce;
+    mAcceleration.x = dragForce;
 }
 
 void PhysicsEntity::displayCollider() const {
     // draw the collision box
     Rectangle colliderBox = {
-        this->position.x - this->colliderDimensions.x / 2.0f,
-        this->position.y - this->colliderDimensions.y / 2.0f,
-        this->colliderDimensions.x,
-        this->colliderDimensions.y
+        mPosition.x - mColliderDimensions.x / 2.0f,
+        mPosition.y - mColliderDimensions.y / 2.0f,
+        mColliderDimensions.x,
+        mColliderDimensions.y
     };
 
     DrawRectangleLines(
@@ -232,35 +333,11 @@ void PhysicsEntity::displayCollider() const {
     );
 }
 
-bool PhysicsEntity::isOutOfBounds() const {
-    if (this->velocity.x > 0.0f) { // Moving right
-        if (this->position.x - this->scale.x / 2 >= constants::MAP_RIGHT_BOUND) {
-            return true;
-        }
-    } else if (this->velocity.x < 0.0f) { // Moving left
-        if (this->position.x + this->scale.x / 2 <= constants::MAP_LEFT_BOUND) {
-            return true;
-        }
-    }
-
-    if (this->velocity.y > 0.0f) { // Moving up
-        if (this->position.y - this->scale.y / 2 <= constants::MAP_TOP_BOUND) {
-            return true;
-        }
-    } else if (this->velocity.y < 0.0f) { // Moving down
-        if (this->position.y + this->scale.y / 2 >= constants::MAP_BOTTOM_BOUND) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void PhysicsEntity::setCollisionCandidates(const std::vector<PhysicsEntity*>& entities) {
-    this->collisionCandidates.clear();
+    mCollisionCandidates.clear();
 
     for (auto e : entities) {
-        this->collisionCandidates.push_back(e);
+        mCollisionCandidates.push_back(e);
     }
 }
 
@@ -272,7 +349,7 @@ void PhysicsEntity::update(float deltaTime) {
     this->collideAndMove(deltaTime);
 
     if (this->shouldAnimate()) {
-        this->texture.animate(deltaTime);
+        mTexture.animate(deltaTime);
     }
 }
 

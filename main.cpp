@@ -1,7 +1,7 @@
 /**
 * Author: Alan Chen
-* Assignment: Lunar Lander
-* Date due: 10/26/2026
+* Assignment: Rise of the AI
+* Date due: 11/16/2026
 *
 * I pledge that I have completed this assignment without
 * collaborating with anyone else, in conformance with the
@@ -10,66 +10,101 @@
 **/
 
 #include <map>
-#include <memory>
-#include <random>
 
 #include "constants.h"
 #include "entity.h"
+#include "level_a.h"
 #include "lib.h"
+#include "player.h"
+#include "scene.h"
+#include "slime.h"
 #include "ui.h"
 
-enum class GameStatus { IN_MENU, STARTING, IN_PROGRESS, ENDED };
-
 AppStatus gAppStatus = AppStatus::RUNNING;
-GameStatus gGameStatus = GameStatus::IN_MENU;
+Camera2D gCamera = {};
 
 float gTimeAccumulator = 0.0f;
 float gPreviousTimestampSec = 0.0f;
 
-Color gBackgroundColor = SKYBLUE;
+Scene* gCurrentScene = nullptr;
+std::map<SceneId, Scene*> gLevels = {};
 
-void resetGame() {
-    // Delete
-    for (auto& pair : Entity::registry()) {
-        auto ptr = pair.second.get();
+/**
+ * @brief Smoothly adjusts the camera's target position towards a specified
+ * target position.
+ *
+ * @param camera A pointer to a `Camera2D` struct.
+ * @param targetPosition The position the camera should move towards.
+ */
+void panCamera(Camera2D* camera, Vector2 targetPosition) {
+    Vector2 positionDifference = Vector2Subtract(targetPosition, camera->target);
 
-        // ptr->markForDeletion();
+    camera->target = Vector2Add(
+        camera->target,
+        Vector2Scale(positionDifference, 0.1f)
+    ); // 0.1 = smoothing factor
+}
+
+void switchToScene(Scene* scene) {
+    if (gCurrentScene) {
+        gCurrentScene->shutdown();
     }
+
+    gCurrentScene = scene;
+    gCurrentScene->initialize();
+    gCamera.target = gCurrentScene->getCameraTarget();
 }
 
 void initialize() {
-    InitWindow(constants::SCREEN_WIDTH, constants::SCREEN_HEIGHT, "Save the Chinese Spy Balloon");
+    InitWindow(constants::SCREEN_WIDTH, constants::SCREEN_HEIGHT, "Knight vs. Slimes");
+    InitAudioDevice();
 
     SetTargetFPS(constants::TARGET_FPS);
 
-    // Map
-
     // Textures
+    auto map =
+        TextureAsset::create(new TextureAsset("map_tiles", "assets/textures/world_tileset.png"));
+    map->mType = TextureType::ATLAS;
+    map->mSpriteSheetDimensions = {16, 12};
+
+    auto knight = TextureAsset::create(new TextureAsset("knight", "assets/textures/knight.png"));
+    knight->mType = TextureType::ATLAS;
+    knight->mSpriteSheetDimensions = {8, 8};
+    knight->mAnimationSpriteSheetFrames = {
+        {static_cast<int32_t>(Player::AnimationState::IDLE), {0, 1, 2, 3}},
+        {static_cast<int32_t>(Player::AnimationState::MOVING),
+         {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}},
+        {static_cast<int32_t>(Player::AnimationState::JUMPING), {40, 41, 42, 43, 44, 45, 46, 47}},
+        {static_cast<int32_t>(Player::AnimationState::DEAD), {56, 57, 58, 59}},
+    };
+
+    auto greenSlime =
+        TextureAsset::create(new TextureAsset("green_slime", "assets/textures/slime_green.png"));
+    greenSlime->mType = TextureType::ATLAS;
+    greenSlime->mSpriteSheetDimensions = {3, 4};
+    greenSlime->mAnimationSpriteSheetFrames = {
+        {static_cast<int32_t>(Slime::AnimationState::SPAWNING), {0, 1, 2, 3}},
+        {static_cast<int32_t>(Slime::AnimationState::ACTIVE), {4, 5, 6, 7}}
+    };
+
+    auto purpleSlime =
+        TextureAsset::create(new TextureAsset("purple_slime", "assets/textures/slime_purple.png"));
+    purpleSlime->mType = TextureType::ATLAS;
+    purpleSlime->mSpriteSheetDimensions = {3, 4};
+    purpleSlime->mAnimationSpriteSheetFrames = {
+        {static_cast<int32_t>(Slime::AnimationState::SPAWNING), {0, 1, 2, 3}},
+        {static_cast<int32_t>(Slime::AnimationState::ACTIVE), {4, 5, 6, 7}}
+    };
 
     // Entities
 
-    // Vector2 tileSize = {50.0f, 50.0f};
-    // uint32_t tileCount = 2 * constants::SCREEN_WIDTH / tileSize.x;
+    // Levels
+    gLevels[SceneId::LEVEL_A] = new LevelA(constants::SCREEN_CENTER, "#000000");
+    switchToScene(gLevels[SceneId::LEVEL_A]);
 
-    // float leftMostX = constants::SCREEN_CENTER.x - (tileCount * tileSize.x) / 2.0f;
-
-    // for (uint32_t i = 0; i < tileCount; ++i) {
-    //     auto tile = Entity::create(new PhysicsEntity(gGrassTileTexture));
-    //     tile->scale = tileSize;
-    //     tile->colliderDimensions = tile->scale;
-    //     tile->position = {leftMostX + i * tileSize.x, constants::SCREEN_HEIGHT - tileSize.y / 2.0f};
-    //     tile->anchored = true;
-
-    //     gMapTiles.push_back(tile);
-    // }
-
-    // Backgrounds
-    // Sets player positions, zeroes out scores, etc.
-    resetGame();
-
-    // Audio
-
-    // UI elements
+    gCamera.offset = constants::SCREEN_CENTER;
+    gCamera.rotation = 0.0f;
+    gCamera.zoom = 1.0f;
 
     gPreviousTimestampSec = static_cast<float>(GetTime());
 }
@@ -77,59 +112,22 @@ void initialize() {
 void processInput() {
     Vector2 mousePosition = GetMousePosition();
 
-    switch (gGameStatus) {
-        case (GameStatus::IN_MENU): {
-            if (gPlayButton.leftClicked()) {
-                resetGame();
-                gGameStatus = GameStatus::STARTING;
-            }
+    if (Player* player = gCurrentScene->getState().player) {
+        player->resetMovement();
 
-            if (gQuitButton.leftClicked()) {
-                gAppStatus = AppStatus::TERMINATED;
-            }
+        if (IsKeyDown(KEY_A)) {
+            player->moveLeft();
+        } else if (IsKeyDown(KEY_D)) {
+            player->moveRight();
+        }
 
-            break;
+        if (IsKeyPressed(KEY_W) && player->mIsCollidingBottom) {
+            player->jump();
         }
-        case (GameStatus::STARTING): {
-            // No inputs possible
-            break;
-        }
-        case (GameStatus::IN_PROGRESS): {
-            break;
-        }
-        case (GameStatus::ENDED): {
-            if (gBackToMenuButton.leftClicked()) {
-                resetGame();
-                gGameStatus = GameStatus::IN_MENU;
-            }
-
-            if (gQuitButton.leftClicked()) {
-                gAppStatus = AppStatus::TERMINATED;
-            }
-
-            break;
-        }
-        default:
-            break;
     }
 
     if (IsKeyDown(KEY_Q) || WindowShouldClose()) {
         gAppStatus = AppStatus::TERMINATED;
-    }
-}
-
-void updateGameMenu() {}
-
-void updateGameStarting(float deltaTime) {}
-
-void updateGameInProgress(float deltaTime) {
-    // Set collision candidates
-    for (auto& pair : Entity::registry()) {
-        Entity* ptr = pair.second.get();
-    }
-
-    for (auto& pair : Entity::registry()) {
-        pair.second->update(deltaTime);
     }
 }
 
@@ -156,26 +154,8 @@ void update() {
             }
         }
 
-        switch (gGameStatus) {
-            case (GameStatus::IN_MENU): {
-                updateGameMenu();
-                break;
-            }
-            case (GameStatus::STARTING): {
-                updateGameStarting(constants::FIXED_TIMESTEP);
-                break;
-            }
-            case (GameStatus::IN_PROGRESS): {
-                updateGameInProgress(constants::FIXED_TIMESTEP);
-                break;
-            }
-            case (GameStatus::ENDED): {
-                break;
-            }
-            default:
-                break;
-        }
-
+        gCurrentScene->update(constants::FIXED_TIMESTEP);
+        panCamera(&gCamera, gCurrentScene->getCameraTarget());
         deltaTime -= constants::FIXED_TIMESTEP;
     }
 
@@ -184,20 +164,25 @@ void update() {
 
 void render() {
     BeginDrawing();
+    BeginMode2D(gCamera);
 
-    ClearBackground(gBackgroundColor);
+    gCurrentScene->render();
 
-    for (const auto& pair : Entity::registry()) {
-        pair.second->render();
-    }
-
+    EndMode2D();
     EndDrawing();
 }
 
 void shutdown() {
+    for (std::pair<const SceneId, Scene*>& entry : gLevels) {
+        delete entry.second;
+    }
+
+    gLevels.clear();
+
     Entity::registry().clear();
     TextureAsset::registry().clear();
 
+    CloseAudioDevice();
     CloseWindow();
 }
 
@@ -207,6 +192,12 @@ int main() {
     while (gAppStatus == AppStatus::RUNNING) {
         processInput();
         update();
+
+        SceneId nextScene = gCurrentScene->getState().nextSceneId;
+        if (nextScene != SceneId::NO_SCENE) {
+            switchToScene(gLevels[nextScene]);
+        }
+
         render();
     }
 
