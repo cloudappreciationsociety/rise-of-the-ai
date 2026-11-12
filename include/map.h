@@ -34,6 +34,13 @@ public:
     void render();
     bool isSolidTileAt(Vector2 position, float* xOverlap, float* yOverlap) const;
 
+    Vector2 getCenterOfTile(int32_t col, int32_t row) const {
+        return {
+            mOrigin.x + (col + 0.5f - mMapColumns / 2.0f) * mTileSize,
+            mOrigin.y + (row + 0.5f - mMapRows / 2.0f) * mTileSize
+        };
+    }
+
     int getMapColumns() const {
         return mMapColumns;
     }

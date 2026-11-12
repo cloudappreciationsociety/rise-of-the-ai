@@ -170,6 +170,7 @@ public:
     float mHealth = 0.0f;
     float mMaxHealth = 0.0f;
     Vector2 mMovement = {0.0f, 0.0f};
+    float mMoveSpeed = 100.0f;
     MoveDirection direction = MoveDirection::RIGHT;
     bool mIsJumping = false;
     float mJumpPower = 150.0f;
@@ -177,7 +178,12 @@ public:
 public:
     using PhysicsEntity::PhysicsEntity;
 
-    void handleJump() {
+    void applyMovement() {
+        this->normalizeMovement();
+        mVelocity.x = mMovement.x * mMoveSpeed;
+    }
+
+    void applyJump() {
         if (mIsJumping) {
             mIsJumping = false;
             mVelocity.y -= mJumpPower;

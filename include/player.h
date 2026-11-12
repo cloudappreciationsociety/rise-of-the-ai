@@ -10,6 +10,9 @@ public:
     float mMoveSpeed = 125.0f;
     uint32_t mLives = 3;
 
+protected:
+    void handleCollision(Collision collision) override;
+
 public:
     Player();
 

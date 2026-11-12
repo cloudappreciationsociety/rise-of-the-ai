@@ -65,7 +65,7 @@ void initialize() {
     auto map =
         TextureAsset::create(new TextureAsset("map_tiles", "assets/textures/world_tileset.png"));
     map->mType = TextureType::ATLAS;
-    map->mSpriteSheetDimensions = {16, 12};
+    map->mSpriteSheetDimensions = {16, 16};
 
     auto knight = TextureAsset::create(new TextureAsset("knight", "assets/textures/knight.png"));
     knight->mType = TextureType::ATLAS;

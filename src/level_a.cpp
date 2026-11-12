@@ -36,22 +36,28 @@ void LevelA::initialize() {
         ----------- PROTAGONIST -----------
     */
     mGameState.player = Entity::create(new Player());
-    mGameState.player->mPosition = {constants::SCREEN_CENTER.x, constants::SCREEN_CENTER.y};
-
-    //mGameState.xochitl->setJumpingPower(550.0f);
+    mGameState.player->mPosition =
+        mGameState.map->getCenterOfTile(LevelA::PLAYER_SPAWN_COL, LevelA::PLAYER_SPAWN_ROW);
     mGameState.player->mAcceleration = {0.0f, ACCELERATION_OF_GRAVITY};
 
-    Slime* slime = Entity::create(new Slime(Slime::Type::WANDERER));
-    slime->mPosition = {constants::SCREEN_CENTER.x, constants::SCREEN_CENTER.y - 100.0f};
-    slime->mAcceleration = {0.0f, ACCELERATION_OF_GRAVITY};
-    slime->mTexture.loadAsset(TextureAsset::get("green_slime"));
-    slime->spawn(2.0f);
+    for (const SlimeSpawn& spawn : mSlimeSpawns) {
+        Slime* slime = Entity::create(new Slime(spawn.type));
+        slime->mTexture.loadAsset(
+            TextureAsset::get(spawn.type == Slime::Type::CHASER ? "purple_slime" : "green_slime")
+        );
+        slime->mPosition = mGameState.map->getCenterOfTile(spawn.col, spawn.row);
+        slime->mTarget = mGameState.player;
+        slime->mAcceleration = {0.0f, ACCELERATION_OF_GRAVITY};
+        slime->spawn(1.0f);
 
-    mGameState.enemies.push_back(slime);
+        mGameState.enemies.push_back(slime);
+    }
 }
 
 void LevelA::update(float deltaTime) {
     // UpdateMusicStream(mGameState.bgm);
+
+    // Have all entities collide with the map
     for (auto& pair : Entity::registry()) {
         if (PhysicsEntity* e = dynamic_cast<PhysicsEntity*>(pair.second.get())) {
             e->mMap = mGameState.map;

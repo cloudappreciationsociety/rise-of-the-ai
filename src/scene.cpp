@@ -1,6 +1,8 @@
 #include "scene.h"
 
-Scene::Scene() : mGameState {}, mOrigin {} {}
+#include "constants.h"
+
+Scene::Scene() : mGameState {}, mOrigin {constants::SCREEN_CENTER} {}
 
 Scene::Scene(Vector2 origin, const char* bgHexCode) :
     mGameState {},
