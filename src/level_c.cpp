@@ -55,7 +55,7 @@ void LevelC::initialize() {
 
     mGameState.bg = Entity::create(new Entity(TextureAsset::get("bg_c")));
     mGameState.bg->mPosition = constants::SCREEN_CENTER;
-    mGameState.bg->mScale = Vector2Scale(constants::SCREEN_SIZE, 2.0f);
+    mGameState.bg->mScale = Vector2Scale(constants::SCREEN_SIZE, 3.0f);
 
     /*
         ----------- PROTAGONIST -----------
