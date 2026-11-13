@@ -11,13 +11,13 @@
 
 #include <map>
 
+#include "audio.h"
 #include "constants.h"
-#include "entity.h"
 #include "level_a.h"
+#include "level_b.h"
 #include "lib.h"
-#include "player.h"
+#include "menus.h"
 #include "scene.h"
-#include "slime.h"
 #include "ui.h"
 
 AppStatus gAppStatus = AppStatus::RUNNING;
@@ -96,11 +96,37 @@ void initialize() {
         {static_cast<int32_t>(Slime::AnimationState::ACTIVE), {4, 5, 6, 7}}
     };
 
-    // Entities
+    auto coin = TextureAsset::create(new TextureAsset("coin", "assets/textures/coin.png"));
+    coin->mType = TextureType::ATLAS;
+    coin->mSpriteSheetDimensions = {1, 12};
+    coin->useDefaultAnimation();
+
+    TextureAsset::create(new TextureAsset("bg_a", "assets/textures/bg-a.png"));
+    TextureAsset::create(new TextureAsset("slime_ball", "assets/textures/slime_ball.png"));
+
+    // Audio
+    Audio::get().loadSound("knight_jump", "assets/audio/knight-jump.mp3");
+    Audio::get().loadSound("knight_hurt", "assets/audio/knight-ow.mp3");
+    Audio::get().loadSound("knight_death", "assets/audio/knight-death.mp3");
+    Audio::get().loadSound("slime_jump", "assets/audio/slime-jump.mp3");
+    Audio::get().loadSound("slime_death", "assets/audio/slime-death.mp3");
+    Audio::get().loadSound("collect", "assets/audio/collect.mp3");
+    Audio::get().loadSound("slime_throw", "assets/audio/slime-throw.mp3");
+    Audio::get().loadSound("slime_ball_impact", "assets/audio/slime-ball-impact.mp3");
+    Audio::get().loadSound("win", "assets/audio/win.mp3");
+    Audio::get().loadSound("lose", "assets/audio/lose.mp3");
+    Audio::get().loadSound("level-complete", "assets/audio/level-complete.mp3");
+
+    Audio::get().loadMusic("start_menu", "assets/audio/menu-bg-music.mp3", 1.0f);
+    Audio::get().loadMusic("bg", "assets/audio/autumn-leaves.mp3", 1.0f);
 
     // Levels
+    gLevels[SceneId::START] = new StartMenu;
     gLevels[SceneId::LEVEL_A] = new LevelA(constants::SCREEN_CENTER, "#000000");
-    switchToScene(gLevels[SceneId::LEVEL_A]);
+    gLevels[SceneId::LEVEL_B] = new LevelB(constants::SCREEN_CENTER, "#000000");
+    gLevels[SceneId::WIN] = new WinMenu;
+    gLevels[SceneId::LOSE] = new LoseMenu;
+    switchToScene(gLevels[SceneId::START]);
 
     gCamera.offset = constants::SCREEN_CENTER;
     gCamera.rotation = 0.0f;
@@ -115,15 +141,26 @@ void processInput() {
     if (Player* player = gCurrentScene->getState().player) {
         player->resetMovement();
 
-        if (IsKeyDown(KEY_A)) {
-            player->moveLeft();
-        } else if (IsKeyDown(KEY_D)) {
-            player->moveRight();
-        }
+        if (player->isAlive()) {
+            if (IsKeyDown(KEY_A)) {
+                player->moveLeft();
+            } else if (IsKeyDown(KEY_D)) {
+                player->moveRight();
+            }
 
-        if (IsKeyPressed(KEY_W) && player->mIsCollidingBottom) {
-            player->jump();
+            if (IsKeyPressed(KEY_W) && player->mIsCollidingBottom) {
+                player->jump();
+            }
         }
+    }
+
+    // Swap between levels
+    if (IsKeyDown(KEY_ONE)) {
+        gCurrentScene->getState().nextSceneId = SceneId::LEVEL_A;
+    } else if (IsKeyDown(KEY_TWO)) {
+        gCurrentScene->getState().nextSceneId = SceneId::LEVEL_B;
+    } else if (IsKeyDown(KEY_THREE)) {
+        gCurrentScene->getState().nextSceneId = SceneId::LEVEL_C;
     }
 
     if (IsKeyDown(KEY_Q) || WindowShouldClose()) {
@@ -169,6 +206,9 @@ void render() {
     gCurrentScene->render();
 
     EndMode2D();
+
+    gCurrentScene->renderUI();
+
     EndDrawing();
 }
 
@@ -181,6 +221,8 @@ void shutdown() {
 
     Entity::registry().clear();
     TextureAsset::registry().clear();
+
+    Audio::get().shutdown();
 
     CloseAudioDevice();
     CloseWindow();

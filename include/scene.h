@@ -10,13 +10,11 @@ struct GameState {
     Player* player;
     std::vector<Actor*> enemies;
     std::vector<PhysicsEntity*> objects;
+    Entity* bg;
 
     Map* map;
 
-    // Music bgm;
-    // Sound jumpSound;
-
-    SceneId nextSceneId;
+    SceneId nextSceneId = SceneId::NO_SCENE;
 };
 
 class Scene {
@@ -31,14 +29,19 @@ public:
 
     virtual ~Scene() = default;
 
-    virtual void initialize() = 0;
+    virtual void initialize();
     virtual void update(float deltaTime) = 0;
     virtual void render() = 0;
-    virtual void shutdown() = 0;
+
+    virtual void renderUI() {
+        return;
+    }
+
+    virtual void shutdown();
 
     std::vector<PhysicsEntity*> getPlayerCollisionCandidates() const;
 
-    GameState getState() const {
+    GameState& getState() {
         return mGameState;
     }
 

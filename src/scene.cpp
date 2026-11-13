@@ -20,3 +20,27 @@ std::vector<PhysicsEntity*> Scene::getPlayerCollisionCandidates() const {
 
     return playerCollisionCandidates;
 }
+
+void Scene::initialize() {
+    mGameState.nextSceneId = SceneId::NO_SCENE;
+}
+
+void Scene::shutdown() {
+    if (mGameState.bg) {
+        mGameState.bg->markForDeletion();
+        mGameState.bg = nullptr;
+    }
+
+    mGameState.player = nullptr;
+    mGameState.enemies.clear();
+    mGameState.objects.clear();
+
+    for (auto& pair : Entity::registry()) {
+        if (PhysicsEntity* e = dynamic_cast<PhysicsEntity*>(pair.second.get())) {
+            e->markForDeletion();
+        }
+    }
+
+    delete mGameState.map;
+    mGameState.map = nullptr;
+}

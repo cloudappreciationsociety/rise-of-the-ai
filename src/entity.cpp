@@ -58,6 +58,7 @@ void Entity::render() const {
 }
 
 void PhysicsEntity::resetColliderFlags() {
+    mIsCollidingWithMap = false;
     mIsCollidingTop = false;
     mIsCollidingBottom = false;
     mIsCollidingRight = false;
@@ -87,9 +88,13 @@ bool PhysicsEntity::isColliding(const PhysicsEntity* other) const {
     return xDistance < 0.0f && yDistance < 0.0f;
 }
 
-void PhysicsEntity::checkCollisionsX() {
+void PhysicsEntity::checkSolidCollisionsX() {
     for (PhysicsEntity* collidableEntity : mCollisionCandidates) {
         if (!this->isColliding(collidableEntity)) {
+            continue;
+        }
+
+        if (!collidableEntity->mIsSolid) {
             continue;
         }
 
@@ -150,10 +155,14 @@ void PhysicsEntity::checkCollisionsX() {
  * many entities are in the `collidableEntities` array that need to be checked
  * for collisions with the current entity.
  */
-void PhysicsEntity::checkCollisionsY() {
+void PhysicsEntity::checkSolidCollisionsY() {
     // STEP 1: For every entity that our player can collide with...
     for (PhysicsEntity* collidableEntity : mCollisionCandidates) {
         if (!this->isColliding(collidableEntity)) {
+            continue;
+        }
+
+        if (!collidableEntity->mIsSolid) {
             continue;
         }
 
@@ -171,12 +180,14 @@ void PhysicsEntity::checkCollisionsY() {
         if (mVelocity.y > 0) {
             mPosition.y -= yOverlap;
             mVelocity.y = 0;
+
             mIsCollidingBottom = true;
 
             mCollisions.push_back({collidableEntity, CollisionFace::BOTTOM});
         } else if (mVelocity.y < 0) {
             mPosition.y += yOverlap;
             mVelocity.y = 0;
+
             mIsCollidingTop = true;
 
             mCollisions.push_back({collidableEntity, CollisionFace::TOP});
@@ -219,6 +230,7 @@ void PhysicsEntity::checkMapCollisionsY() {
         mPosition.y += yOverlap; // push down
         mVelocity.y = 0.0f;
         mIsCollidingTop = true;
+        mIsCollidingWithMap = true;
     }
 
     // COLLISION BELOW (falling downward)
@@ -229,6 +241,7 @@ void PhysicsEntity::checkMapCollisionsY() {
         mPosition.y -= yOverlap; // push up
         mVelocity.y = 0.0f;
         mIsCollidingBottom = true;
+        mIsCollidingWithMap = true;
     }
 }
 
@@ -267,6 +280,7 @@ void PhysicsEntity::checkMapCollisionsX() {
         mPosition.x -= xOverlap * 1.01f; // push left
         mVelocity.x = 0.0f;
         mIsCollidingRight = true;
+        mIsCollidingWithMap = true;
     }
 
     // COLLISION ON LEFT (moving left)
@@ -277,6 +291,32 @@ void PhysicsEntity::checkMapCollisionsX() {
         mPosition.x += xOverlap * 1.01f; // push right
         mVelocity.x = 0.0f;
         mIsCollidingLeft = true;
+        mIsCollidingWithMap = true;
+    }
+}
+
+void PhysicsEntity::checkNonsolidCollisions() {
+    for (PhysicsEntity* other : mCollisionCandidates) {
+        if (other->mIsSolid || !this->isColliding(other)) {
+            continue;
+        }
+
+        float dx = other->mPosition.x - mPosition.x;
+        float dy = other->mPosition.y - mPosition.y;
+
+        float xPenetration =
+            (mColliderDimensions.x + other->mColliderDimensions.x) / 2.0f - fabs(dx);
+        float yPenetration =
+            (mColliderDimensions.y + other->mColliderDimensions.y) / 2.0f - fabs(dy);
+
+        CollisionFace face;
+        if (xPenetration < yPenetration) {
+            face = (dx > 0.0f) ? CollisionFace::RIGHT : CollisionFace::LEFT;
+        } else {
+            face = (dy > 0.0f) ? CollisionFace::BOTTOM : CollisionFace::TOP;
+        }
+
+        mCollisions.push_back({other, face});
     }
 }
 
@@ -292,12 +332,14 @@ void PhysicsEntity::collideAndMove(float deltaTime) {
     mVelocity.y += mAcceleration.y * deltaTime;
 
     mPosition.y += mVelocity.y * deltaTime;
-    this->checkCollisionsY();
+    this->checkSolidCollisionsY();
     this->checkMapCollisionsY();
 
     mPosition.x += mVelocity.x * deltaTime;
-    this->checkCollisionsX();
+    this->checkSolidCollisionsX();
     this->checkMapCollisionsX();
+
+    this->checkNonsolidCollisions();
 
     for (const auto& collision : mCollisions) {
         this->handleCollision(collision);
@@ -357,4 +399,12 @@ void PhysicsEntity::render() const {
     Entity::render();
 
     this->displayCollider();
+}
+
+void Actor::updateStun(float deltaTime) {
+    mStunTimer = std::max(0.0f, mStunTimer - deltaTime);
+
+    if (mStunTimer > 0.0f) {
+        mVelocity.x -= mVelocity.x * std::min(1.0f, KNOCKBACK_DRAG * deltaTime);
+    }
 }

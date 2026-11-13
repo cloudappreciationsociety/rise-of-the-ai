@@ -16,7 +16,7 @@ public:
     AIState mAIState;
     bool mIsSpawning = true;
     float mSpawnedTime = 0.0f;
-    const Actor* mTarget = nullptr;
+    Actor* mTarget = nullptr;
 
     float mPatrolOriginX = 0.0f;
     bool mHasPatrolOrigin = false;
@@ -37,11 +37,25 @@ private:
     void move();
     void wander(float deltaTime);
     void follow(float deltaTime);
+    void shoot(float deltaTime);
+    void shootSlimeBall();
 
 public:
     Slime(Type type);
 
+    void jump() override;
     void spawn(float spawnTime);
+    void update(float deltaTime) override;
+    void die();
+};
+
+class SlimeBall: public PhysicsEntity {
+protected:
+    void handleCollision(Collision collision) override;
+
+public:
+    SlimeBall(PhysicsEntity* target);
+
     void update(float deltaTime) override;
 };
 

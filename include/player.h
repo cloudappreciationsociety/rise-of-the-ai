@@ -4,11 +4,19 @@
 #include "entity.h"
 
 class Player: public Actor {
+private:
+    static constexpr float INVULN_FRAME_TIME = 0.5f;
+
 public:
     enum class AnimationState { IDLE, MOVING, JUMPING, DEAD };
 
-    float mMoveSpeed = 125.0f;
-    uint32_t mLives = 3;
+    bool mIsDying = false;
+    float mInvulnerabilityTimer = 0.0f;
+
+private:
+    bool isInvulnerable() const {
+        return mInvulnerabilityTimer > 0.0f;
+    }
 
 protected:
     void handleCollision(Collision collision) override;
@@ -16,6 +24,8 @@ protected:
 public:
     Player();
 
+    void takeDamage(float damage) override;
+    void jump() override;
     void update(float deltaTime) override;
 };
 

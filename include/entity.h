@@ -111,10 +111,12 @@ protected:
 public:
     const Map* mMap = nullptr;
 
+    bool mIsCollidingWithMap = false;
     bool mIsCollidingTop = false;
     bool mIsCollidingBottom = false;
     bool mIsCollidingRight = false;
     bool mIsCollidingLeft = false;
+    bool mIsSolid = true;
 
     Vector2 mVelocity = {0.0f, 0.0f};
     Vector2 mAcceleration = {0.0f, 0.0f};
@@ -125,11 +127,11 @@ public:
 
 private:
     void resetColliderFlags();
-    bool isColliding(const PhysicsEntity* other) const;
-    void checkCollisionsX();
+    void checkSolidCollisionsX();
     void checkMapCollisionsX();
-    void checkCollisionsY();
+    void checkSolidCollisionsY();
     void checkMapCollisionsY();
+    void checkNonsolidCollisions();
 
 protected:
     void collideAndMove(float deltaTime);
@@ -138,7 +140,7 @@ protected:
     void displayCollider() const;
 
     virtual bool canCollideWith(const PhysicsEntity* other) const {
-        return other != this;
+        return other != this && other->mStatus == EntityStatus::ACTIVE;
     }
 
     virtual void handleCollision(Collision collision) {
@@ -148,6 +150,7 @@ protected:
 public:
     using Entity::Entity;
 
+    bool isColliding(const PhysicsEntity* other) const;
     void setCollisionCandidates(const std::vector<PhysicsEntity*>& entities);
     void update(float deltaTime) override;
     void render() const override;
@@ -164,6 +167,9 @@ public:
 
 // An entity with health
 class Actor: public PhysicsEntity {
+private:
+    static constexpr float KNOCKBACK_DRAG = 5.0f;
+
 public:
     enum class MoveDirection { UP, DOWN, LEFT, RIGHT };
 
@@ -175,8 +181,21 @@ public:
     bool mIsJumping = false;
     float mJumpPower = 150.0f;
 
+protected:
+    float mStunTimer = 0.0f;
+    void updateStun(float deltaTime);
+
 public:
     using PhysicsEntity::PhysicsEntity;
+
+    bool isStunned() const {
+        return mStunTimer > 0.0f;
+    }
+
+    void knockback(Vector2 velocity, float stunSeconds) {
+        mVelocity = velocity;
+        mStunTimer = stunSeconds;
+    }
 
     void applyMovement() {
         this->normalizeMovement();
@@ -190,7 +209,7 @@ public:
         }
     }
 
-    void jump() {
+    virtual void jump() {
         mIsJumping = true;
     }
 
