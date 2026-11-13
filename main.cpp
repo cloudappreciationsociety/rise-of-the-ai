@@ -87,7 +87,7 @@ void switchToScene(Scene* scene) {
 }
 
 void initialize() {
-    InitWindow(constants::SCREEN_WIDTH, constants::SCREEN_HEIGHT, "Knight vs. Slimes");
+    InitWindow(constants::SCREEN_WIDTH, constants::SCREEN_HEIGHT, "Slime the Slimes");
     InitAudioDevice();
 
     SetTargetFPS(constants::TARGET_FPS);

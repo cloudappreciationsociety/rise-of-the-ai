@@ -22,7 +22,7 @@ void StartMenu::update(float deltaTime) {
 void StartMenu::render() {
     ClearBackground(ColorFromHex(mBgColorHexCode));
 
-    drawText("Slime Killer", constants::SCREEN_CENTER, constants::ui::HEADER_FONT_SIZE, WHITE);
+    drawText("Slime the Slimes", constants::SCREEN_CENTER, constants::ui::HEADER_FONT_SIZE, WHITE);
     drawText(
         "Press [ENTER] to start.",
         Vector2Add(constants::SCREEN_CENTER, {0.0f, 100.0f}),
