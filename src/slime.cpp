@@ -18,11 +18,13 @@ Slime::Slime(Slime::Type type) : mType(type), mAIState(AIState::IDLE) {
             break;
         }
         case (Slime::Type::CHASER): {
-            mJumpPower = 600.0f;
+            mJumpPower = getRandomFloat(450.0f, 500.0f);
+            mMoveSpeed = getRandomFloat(150.0f, 175.0f);
             break;
         }
         case (Slime::Type::THROWER): {
             mTexture.mTint = ORANGE;
+            mMoveSpeed = getRandomFloat(50.0f, 125.0f);
             break;
         }
 
@@ -156,8 +158,8 @@ void Slime::follow(float deltaTime) {
         50.0f; // Only walk off a ledge if the player is this far below
     static constexpr float JUMP_Y_THRESHOLD = 60.0f; // Player this far above counts as "above"
     static constexpr float JUMP_X_THRESHOLD =
-        150.0f; // Must also be within this horizontal distance to jump
-    static constexpr float JUMP_COOLDOWN = 0.8f;
+        300.0f; // Must also be within this horizontal distance to jump
+    static constexpr float JUMP_COOLDOWN = 1.2f;
 
     if (mTarget == nullptr) {
         return;
@@ -183,7 +185,7 @@ void Slime::follow(float deltaTime) {
                 break;
             }
 
-            mDirection = (toTarget.x < 0.0f) ? Direction::LEFT : Direction::RIGHT;
+            Direction direction = (toTarget.x < 0.0f) ? Direction::LEFT : Direction::RIGHT;
 
             bool closeEnough = std::fabs(toTarget.x) < STOP_DISTANCE;
 
@@ -193,6 +195,7 @@ void Slime::follow(float deltaTime) {
             bool grounded = mIsCollidingBottom;
 
             if (!closeEnough && !holdAtLedge || !mIsCollidingBottom) {
+                mDirection = direction;
                 this->move();
             }
 
@@ -218,6 +221,7 @@ void Slime::shoot(float deltaTime) {
     static constexpr float MAX_RANGE = 500.0f; // Farther than this: ignore the player
     static constexpr float WINDUP = 0.8f; // Delay before the first throw
     static constexpr float THROW_COOLDOWN = 2.0f;
+    static constexpr float TARGET_DEVIATION = 10.0f;
 
     if (mTarget == nullptr) {
         return;
@@ -225,7 +229,14 @@ void Slime::shoot(float deltaTime) {
 
     mThrowCooldown = std::max(0.0f, mThrowCooldown - deltaTime);
 
-    Vector2 toTarget = Vector2Subtract(mTarget->mPosition, mPosition);
+    // Add some randomness to the aim
+    Vector2 targetPosition = Vector2Add(
+        mTarget->mPosition,
+        {getRandomFloat(-TARGET_DEVIATION, TARGET_DEVIATION),
+         getRandomFloat(-TARGET_DEVIATION, TARGET_DEVIATION)}
+    );
+
+    Vector2 toTarget = Vector2Subtract(targetPosition, mPosition);
     float distance = Vector2Length(toTarget);
 
     if (distance > MAX_RANGE) {
@@ -240,28 +251,31 @@ void Slime::shoot(float deltaTime) {
     // Always face the player
     mTexture.mIsFlippedX = toTarget.x < 0.0f;
 
+    // Move the opposite direction of the player
+    mDirection = (toTarget.x < 0.0f) ? Direction::RIGHT : Direction::LEFT;
+
     if (distance < MIN_RANGE && !this->isBlocked() && !this->isLedgeAhead()) {
         this->move();
     }
 
     if (mThrowCooldown <= 0.0f) {
-        this->shootSlimeBall();
+        this->shootSlimeBall(targetPosition);
         mThrowCooldown = THROW_COOLDOWN;
     }
 }
 
-void Slime::shootSlimeBall() {
+void Slime::shootSlimeBall(Vector2 targetPosition) {
     constexpr float BALL_HORIZONTAL_SPEED = 350.0f;
     constexpr float BALL_MIN_FLIGHT = 0.5f;
     static constexpr float BALL_GRAVITY = 600.0f;
 
     int32_t sign = (mTarget->mPosition.x - mPosition.x < 0.0f) ? -1 : 1;
-
     Vector2 origin = {mPosition.x + sign * (mScale.x / 2.0f), mPosition.y - mScale.y / 4.0f};
-    Vector2 delta = Vector2Subtract(mTarget->mPosition, origin);
+
+    Vector2 delta = Vector2Subtract(targetPosition, origin);
 
     // t = x / v_x
-    float flightTime = std::min(std::fabs(delta.x) / BALL_HORIZONTAL_SPEED, BALL_MIN_FLIGHT);
+    float flightTime = std::max(std::fabs(delta.x) / BALL_HORIZONTAL_SPEED, BALL_MIN_FLIGHT);
 
     // Vertical launch velocity: v = delta_y / t - 0.5 * g * t
     Vector2 velocity = {
@@ -318,10 +332,12 @@ void Slime::update(float deltaTime) {
     if (!this->isStunned()) {
         this->applyMovement();
 
-        if (mMovement.x < 0.0f) {
-            mTexture.mIsFlippedX = true;
-        } else if (mMovement.x > 0.0f) {
-            mTexture.mIsFlippedX = false;
+        if (mType != Slime::Type::THROWER) {
+            if (mMovement.x < 0.0f) {
+                mTexture.mIsFlippedX = true;
+            } else if (mMovement.x > 0.0f) {
+                mTexture.mIsFlippedX = false;
+            }
         }
 
         this->applyJump();

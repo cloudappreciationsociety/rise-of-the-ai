@@ -8,7 +8,16 @@
 LevelA::LevelA() : Scene {{0.0f, 0.0f}, "#000000"} {}
 
 LevelA::LevelA(Vector2 origin, const char* bgHexCode) : Scene {origin, bgHexCode} {
-    mCoinIcon.loadAsset(TextureAsset::get("coin"));
+    mHealthBar.position = {125.0f, 50.0f};
+    mHealthBar.backgroundColor = BLACK;
+    mHealthBar.barColor = RED;
+    mHealthBar.textColor = WHITE;
+    mHealthBar.size = {200.0f, 40.0f};
+    mHealthBar.title = "HP";
+
+    mCoinIcon.mTexture.loadAsset(TextureAsset::get("coin"));
+    mCoinIcon.mPosition = {40.0f, 100.0f};
+    mCoinIcon.mScale = {40.0f, 40.0f};
 }
 
 LevelA::~LevelA() {
@@ -41,13 +50,6 @@ void LevelA::initialize() {
     mGameState.player->mPosition =
         mGameState.map->getCenterOfTile(LevelA::PLAYER_SPAWN_COL, LevelA::PLAYER_SPAWN_ROW);
     mGameState.player->mAcceleration = {0.0f, ACCELERATION_OF_GRAVITY};
-
-    mHealthBar.position = {125.0f, 50.0f};
-    mHealthBar.backgroundColor = BLACK;
-    mHealthBar.barColor = RED;
-    mHealthBar.textColor = WHITE;
-    mHealthBar.size = {200.0f, 40.0f};
-    mHealthBar.title = "HP";
 
     // Coins
     for (auto coinPosition : mCoins) {
@@ -125,6 +127,9 @@ void LevelA::render() {
 
 void LevelA::renderUI() {
     mHealthBar.render(mGameState.player->mHealth, mGameState.player->mMaxHealth);
+    mCoinIcon.render();
+
+    drawText(TextFormat("%i remaining", mCoinsRemaining), {130.0f, 100.0f}, 24, WHITE);
 }
 
 void LevelA::shutdown() {

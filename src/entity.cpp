@@ -398,7 +398,7 @@ void PhysicsEntity::update(float deltaTime) {
 void PhysicsEntity::render() const {
     Entity::render();
 
-    this->displayCollider();
+    //this->displayCollider();
 }
 
 void Actor::updateStun(float deltaTime) {

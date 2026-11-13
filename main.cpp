@@ -15,10 +15,9 @@
 #include "constants.h"
 #include "level_a.h"
 #include "level_b.h"
+#include "level_c.h"
 #include "lib.h"
 #include "menus.h"
-#include "scene.h"
-#include "ui.h"
 
 AppStatus gAppStatus = AppStatus::RUNNING;
 Camera2D gCamera = {};
@@ -45,6 +44,35 @@ void panCamera(Camera2D* camera, Vector2 targetPosition) {
     ); // 0.1 = smoothing factor
 }
 
+void clampCamera(Camera2D* camera, Rectangle bounds) {
+    if (bounds.width <= 0.0f || bounds.height <= 0.0f) {
+        return;
+    }
+
+    // Current camera extents
+    float leftExtent = camera->offset.x / camera->zoom;
+    float rightExtent = (GetScreenWidth() - camera->offset.x) / camera->zoom;
+    float topExtent = camera->offset.y / camera->zoom;
+    float bottomExtent = (GetScreenHeight() - camera->offset.y) / camera->zoom;
+
+    float minX = bounds.x + leftExtent;
+    float maxX = bounds.x + bounds.width - rightExtent;
+    float minY = bounds.y + topExtent;
+    float maxY = bounds.y + bounds.height - bottomExtent;
+
+    if (minX > maxX) {
+        camera->target.x = bounds.x + bounds.width / 2.0f - (rightExtent - leftExtent) / 2.0f;
+    } else {
+        camera->target.x = std::min(std::max(camera->target.x, minX), maxX);
+    }
+
+    if (minY > maxY) {
+        camera->target.y = bounds.y + bounds.height / 2.0f - (bottomExtent - topExtent) / 2.0f;
+    } else {
+        camera->target.y = std::min(std::max(camera->target.y, minY), maxY);
+    }
+}
+
 void switchToScene(Scene* scene) {
     if (gCurrentScene) {
         gCurrentScene->shutdown();
@@ -53,6 +81,9 @@ void switchToScene(Scene* scene) {
     gCurrentScene = scene;
     gCurrentScene->initialize();
     gCamera.target = gCurrentScene->getCameraTarget();
+    if (Map* map = gCurrentScene->getState().map) {
+        clampCamera(&gCamera, map->getBounds());
+    }
 }
 
 void initialize() {
@@ -102,6 +133,8 @@ void initialize() {
     coin->useDefaultAnimation();
 
     TextureAsset::create(new TextureAsset("bg_a", "assets/textures/bg-a.png"));
+    TextureAsset::create(new TextureAsset("bg_b", "assets/textures/bg-b.png"));
+    TextureAsset::create(new TextureAsset("bg_c", "assets/textures/bg-c.png"));
     TextureAsset::create(new TextureAsset("slime_ball", "assets/textures/slime_ball.png"));
 
     // Audio
@@ -115,7 +148,7 @@ void initialize() {
     Audio::get().loadSound("slime_ball_impact", "assets/audio/slime-ball-impact.mp3");
     Audio::get().loadSound("win", "assets/audio/win.mp3");
     Audio::get().loadSound("lose", "assets/audio/lose.mp3");
-    Audio::get().loadSound("level-complete", "assets/audio/level-complete.mp3");
+    Audio::get().loadSound("level_complete", "assets/audio/level-complete.mp3");
 
     Audio::get().loadMusic("start_menu", "assets/audio/menu-bg-music.mp3", 1.0f);
     Audio::get().loadMusic("bg", "assets/audio/autumn-leaves.mp3", 1.0f);
@@ -124,6 +157,7 @@ void initialize() {
     gLevels[SceneId::START] = new StartMenu;
     gLevels[SceneId::LEVEL_A] = new LevelA(constants::SCREEN_CENTER, "#000000");
     gLevels[SceneId::LEVEL_B] = new LevelB(constants::SCREEN_CENTER, "#000000");
+    gLevels[SceneId::LEVEL_C] = new LevelC(constants::SCREEN_CENTER, "#000000");
     gLevels[SceneId::WIN] = new WinMenu;
     gLevels[SceneId::LOSE] = new LoseMenu;
     switchToScene(gLevels[SceneId::START]);
@@ -193,6 +227,10 @@ void update() {
 
         gCurrentScene->update(constants::FIXED_TIMESTEP);
         panCamera(&gCamera, gCurrentScene->getCameraTarget());
+        if (Map* map = gCurrentScene->getState().map) {
+            clampCamera(&gCamera, map->getBounds());
+        }
+
         deltaTime -= constants::FIXED_TIMESTEP;
     }
 

@@ -5,7 +5,7 @@
 
 Player::Player() : Actor(TextureAsset::get("knight")) {
     mScale = {75.0f, 75.0f};
-    mColliderDimensions = Vector2Scale(mScale, 0.75f);
+    mColliderDimensions = {mScale.x * 0.6f, mScale.y * 0.75f};
     mJumpPower = 500.0f;
     mMoveSpeed = 200.0f;
     mHealth = mMaxHealth = 3.0f;
@@ -13,12 +13,10 @@ Player::Player() : Actor(TextureAsset::get("knight")) {
 }
 
 void Player::handleCollision(Collision collision) {
-    static constexpr float STOMP_DEPTH_FRACTION = 0.6f; // Feet must be in the top 60% of the slime
-    static constexpr float STOMP_JUMP_VELOCITY = 550.0f;
-    static constexpr float HURT_JUMP_VELOCITY = 250.0f;
+    static constexpr float STOMP_DEPTH_FRACTION = 0.7f; // Feet must be in the top 70% of the slime
 
     constexpr float PLAYER_KNOCKBACK_X = 220.0f;
-    constexpr float PLAYER_KNOCKBACK_Y = 300.0f;
+    constexpr float PLAYER_KNOCKBACK_Y = 350.0f;
     constexpr float PLAYER_STUN_SECONDS = 0.35f;
     constexpr float SLIME_KNOCKBACK_X = 160.0f;
     constexpr float SLIME_KNOCKBACK_Y = 150.0f;
@@ -27,6 +25,10 @@ void Player::handleCollision(Collision collision) {
     auto entity = collision.entity;
 
     if (Slime* slime = dynamic_cast<Slime*>(entity)) {
+        if (slime->mIsSpawning) {
+            return;
+        }
+
         float feetY = mPosition.y + mColliderDimensions.y / 2.0f;
         float slimeTopY = slime->mPosition.y - slime->mColliderDimensions.y / 2.0f;
 
@@ -36,25 +38,24 @@ void Player::handleCollision(Collision collision) {
         // Stomped a slime: kill it and launch ourselves up
         if (falling && feetOnTop) {
             slime->die();
-            mVelocity.y = -STOMP_JUMP_VELOCITY;
+            mStompedSlime = true;
             return;
         }
 
         // Touched from the side or below: apply a push-back force
         if (!this->isInvulnerable()) {
             this->takeDamage(1.0f);
-            mVelocity.y = -HURT_JUMP_VELOCITY;
 
-            float away = (mPosition.x >= slime->mPosition.x) ? 1.0f : -1.0f;
+            float sign = (mPosition.x >= slime->mPosition.x) ? 1.0f : -1.0f;
 
             if (this->isAlive()) {
                 this->knockback(
-                    {away * PLAYER_KNOCKBACK_X, -PLAYER_KNOCKBACK_Y},
+                    {sign * PLAYER_KNOCKBACK_X, -PLAYER_KNOCKBACK_Y},
                     PLAYER_STUN_SECONDS
                 );
             }
 
-            slime->knockback({-away * SLIME_KNOCKBACK_X, -SLIME_KNOCKBACK_Y}, SLIME_STUN_SECONDS);
+            slime->knockback({-sign * SLIME_KNOCKBACK_X, -SLIME_KNOCKBACK_Y}, SLIME_STUN_SECONDS);
         }
     }
 }
@@ -81,6 +82,7 @@ void Player::update(float deltaTime) {
         return;
     }
 
+    mStompedSlime = false;
     this->updateStun(deltaTime);
 
     if (mInvulnerabilityTimer > 0.0f) {
@@ -105,6 +107,11 @@ void Player::update(float deltaTime) {
     }
 
     this->collideAndMove(deltaTime);
+
+    static constexpr float STOMP_JUMP_VELOCITY = 550.0f;
+    if (mStompedSlime) {
+        mVelocity.y = -STOMP_JUMP_VELOCITY;
+    }
 
     Player::AnimationState state = Player::AnimationState::IDLE;
     if (!mIsCollidingBottom) {

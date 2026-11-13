@@ -41,6 +41,13 @@ public:
         };
     }
 
+    virtual Rectangle getBounds() const {
+        float width = mMapColumns * mTileSize;
+        float height = mMapRows * mTileSize;
+
+        return {this->mOrigin.x - width / 2.0f, this->mOrigin.y - height / 2.0f, width, height};
+    }
+
     int getMapColumns() const {
         return mMapColumns;
     }

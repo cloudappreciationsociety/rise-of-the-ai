@@ -38,7 +38,7 @@ private:
     void wander(float deltaTime);
     void follow(float deltaTime);
     void shoot(float deltaTime);
-    void shootSlimeBall();
+    void shootSlimeBall(Vector2 targetPosition);
 
 public:
     Slime(Type type);

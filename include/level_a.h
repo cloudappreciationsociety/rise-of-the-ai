@@ -42,14 +42,12 @@ private:
 public:
     static constexpr float TILE_DIMENSION = 60.0f;
     static constexpr float ACCELERATION_OF_GRAVITY = 981.0f;
-    static constexpr float END_GAME_THRESHOLD = 800.0f;
 
 private:
     static constexpr int32_t PLAYER_SPAWN_COL = 2;
     static constexpr int32_t PLAYER_SPAWN_ROW = 9;
 
-    static constexpr uint32_t SLIME_COUNT = 6;
-    const SlimeSpawn mSlimeSpawns[SLIME_COUNT] = {
+    std::vector<SlimeSpawn> mSlimeSpawns = {
         {Slime::Type::WANDERER, 6, 7},
         {Slime::Type::WANDERER, 12, 5},
         {Slime::Type::WANDERER, 18, 7},
@@ -63,7 +61,7 @@ private:
     uint32_t mCoinsRemaining = LevelA::COIN_COUNT;
 
     ProgressBar mHealthBar;
-    TextureInstance mCoinIcon;
+    Entity mCoinIcon;
 
 public:
     LevelA();

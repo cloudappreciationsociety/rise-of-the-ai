@@ -57,7 +57,6 @@ private:
 
 private:
     float mAnimationTime = 0.0f;
-    int32_t mCurrentAnimationFrameIndex = 0;
 
 public:
     const TextureAsset* mAsset = nullptr;
@@ -68,6 +67,7 @@ public:
 
     // For animations
     int32_t mCurrentAnimation = 0;
+    int32_t mCurrentAnimationFrameIndex = 0;
 
     uint32_t mFrameSpeed = TextureInstance::DEFAULT_FRAME_SPEED;
 

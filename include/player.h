@@ -10,7 +10,7 @@ private:
 public:
     enum class AnimationState { IDLE, MOVING, JUMPING, DEAD };
 
-    bool mIsDying = false;
+    bool mStompedSlime = false;
     float mInvulnerabilityTimer = 0.0f;
 
 private:

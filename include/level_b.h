@@ -7,13 +7,13 @@
 
 class LevelB: public Scene {
 private:
-    static constexpr uint32_t LEVEL_WIDTH = 36;
-    static constexpr uint32_t LEVEL_HEIGHT = 14;
+    static constexpr uint32_t LEVEL_WIDTH = 34;
+    static constexpr uint32_t LEVEL_HEIGHT = 22;
 
     enum : int32_t {
         _ = -1, // Empty
         T = 2, // Sand with a lit top edge
-        B = 3, // Sand brick (platforms)
+        B = 3, // Sand brick
         F = 18, // Plain sand
         W = 19 // Cobbled sand
     };
@@ -21,47 +21,47 @@ private:
 private:
     // clang-format off
     int32_t mLevelData[LEVEL_WIDTH * LEVEL_HEIGHT] = {
-        W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, B, B, B, B, B, B, B, B, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, B, B, B, B, _, _, _, _, _, _, _, _, _, _, B, B, B, B, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
-        W, _, _, _, B, B, B, B, _, _, _, _, _, _, _, B, B, B, B, B, B, _, _, _, _, _, _, _, B, B, B, B, _, _, _, W,
-        W, _, _, _, _, _, _, _, B, B, _, _, _, B, B, B, B, B, B, B, B, B, B, _, _, _, B, B, _, _, _, _, _, _, _, W,
-        W, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, W,
-        W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W,
-        W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W,
-        W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, B, B, B, B, B, B, B, B, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, B, B, B, B, _, _, _, _, _, _, _, _, _, _, B, B, B, B, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, W,
+        W, _, _, _, B, B, B, _, _, _, _, _, _, _, _, B, B, B, B, B, B, _, _, _, _, _, _, _, B, B, B, B, _, W,
+        W, _, _, _, _, _, _, _, B, B, _, _, _, B, B, B, B, B, B, B, B, B, B, _, _, _, B, B, _, _, _, _, _, W,
+        W, T, T, T, T, T, T, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, T, T, T, W,
+        W, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, W,
+        W, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, W,
+        W, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, B, _, _, _, _, _, _, _, _, _, _, _, _, F, W,
+        W, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, B, _, _, _, _, B, _, _, _, _, _, F, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, B, _, _, _, F, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, B, B, _, _, _, _, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, F, F, F, F, F, W,
+        W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W
     };
     // clang-format on
 
 public:
     static constexpr float TILE_DIMENSION = 60.0f;
     static constexpr float ACCELERATION_OF_GRAVITY = 981.0f;
-    static constexpr float END_GAME_THRESHOLD = 800.0f;
 
 private:
     static constexpr int32_t PLAYER_SPAWN_COL = 2;
     static constexpr int32_t PLAYER_SPAWN_ROW = 9;
 
-    static constexpr uint32_t SLIME_COUNT = 6;
-    const SlimeSpawn mSlimeSpawns[SLIME_COUNT] = {
-        {Slime::Type::WANDERER, 6, 7},
-        {Slime::Type::WANDERER, 12, 5},
-        {Slime::Type::WANDERER, 18, 7},
-        {Slime::Type::CHASER, 26, 9},
-        {Slime::Type::CHASER, 29, 3},
-        {Slime::Type::THROWER, 12, 3}
-    };
+    std::vector<SlimeSpawn> mSlimeSpawns;
 
-    static constexpr uint32_t COIN_COUNT = 3;
-    const Vector2 mCoins[COIN_COUNT] = {{28, 4}, {7, 8}, {15, 4}};
+    static constexpr uint32_t COIN_COUNT = 6;
+    const Vector2 mCoins[COIN_COUNT] = {{6, 12}, {21, 13}, {28, 3}, {28, 17}, {17, 6}, {31, 12}};
     uint32_t mCoinsRemaining = LevelB::COIN_COUNT;
 
     ProgressBar mHealthBar;
+    Entity mCoinIcon;
 
 public:
     LevelB();
